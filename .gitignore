@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+
+# IDE
+.vscode/
+
+# Image
+*.jpg
+*.jpeg
+*.bmp
+*.png
+*.tiff
+*.gif
+
+# Video
+*.avi
+*.mp4
+*.mkv
+
+# model file
+*.pth
+*.caffemodel
+*.pb
+
+# tensorboard
+events.out*
+
+*.txt

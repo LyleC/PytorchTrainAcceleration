@@ -1,0 +1,53 @@
+{
+    "task": "classification",
+    "device": {
+        "use_amp": 1
+    },
+    "dataset": {
+        "name": "Imagenet",
+        "num_classes": 1000,
+        "root": "/path to root of dataset",
+        "label_file": "label.txt",
+        "train_perc": 0.9,
+        "txt_root": "./train/",
+        "loader": { 
+            "batch_size": 256,
+            "num_workers": 8
+        }, 
+        "transform": {
+            "image_size": 224,
+            "mean": 128,
+            "max_rotate_angle": 30
+        }
+    },
+    "model": {
+        "name": "mobilenet_v2",
+        "model_file": {
+        },
+        "freeze_branch": ""
+    },
+    "optimizer": {
+        "name": "Adam",
+        "lr": 0.001,
+        "lr_gamma": 0.9,
+        "lr_step": 1,
+        "lr_min": 0.000001,
+        "momentum": 0.2,
+        "weight_decay": 0.00004
+    },
+    "train": {
+        "epoch": 100,
+        "eval_interval": 1,
+        "eval_only": 0,
+        "output": 1
+    },
+    "logger": {
+        "root": "./train/logs"
+    },
+    "saver": {
+        "cp_root": "./train/checkpoint",
+        "max_keep": 100,
+        "save_interval": 1,
+        "output_root": "./model_file"
+    }
+}
