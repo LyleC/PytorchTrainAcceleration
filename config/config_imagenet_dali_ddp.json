@@ -5,13 +5,13 @@
     },
     "dataset": {
         "name": "Imagenet",
-        "num_classes": 1000,
-        "root": "/path to root of dataset",
+        "num_classes": 10,
+        "root": "/home/chenlai/datasets/public/imagenet/train-small",
         "label_file": "label.txt",
         "train_perc": 0.9,
         "txt_root": "./train/",
         "loader": { 
-            "batch_size": 256,
+            "batch_size": 128,
             "num_workers": 8
         }, 
         "transform": {
@@ -29,7 +29,7 @@
     "optimizer": {
         "name": "Adam",
         "lr": 0.001,
-        "lr_gamma": 0.9,
+        "lr_gamma": 0.96,
         "lr_step": 1,
         "lr_min": 0.000001,
         "momentum": 0.2,
@@ -46,7 +46,7 @@
     },
     "saver": {
         "cp_root": "./train/checkpoint",
-        "max_keep": 100,
+        "max_keep": 10,
         "save_interval": 1,
         "output_root": "./model_file"
     }

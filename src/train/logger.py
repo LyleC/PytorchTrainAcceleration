@@ -21,9 +21,13 @@ class  Logger(object):
         self.current_epoch = start_epoch
         self.world_size = dist.get_world_size()
         if self.local_rank == 0:
+            if not os.path.isdir(cfg.logger.root):
+                os.mkdir(cfg.logger.root)
             self.writer = SummaryWriter(os.path.join(cfg.logger.root, now))
         self.train_loss_meter = AverageMeter()
         self.val_loss_meter = AverageMeter()
+        self.top1_meter = AverageMeter()
+        self.top5_meter = AverageMeter()
         self.timer = Timer()
 
     def _reduce_tensor(self, tensor: torch.Tensor):
@@ -41,19 +45,24 @@ class  Logger(object):
         self.timer.record()
 
     def log_epoch_train_end(self):
+        epoch_loss = self.train_loss_meter.avg
         epoch_speed = self.timer.get_epoch_speed()
         self.train_loss_meter.reset()
         self.current_epoch += 1
-        return epoch_speed, self.train_loss_meter.avg
+        return epoch_loss, epoch_speed
     
     def log_epoch_val_start(self):
         self.timer.reset()
         self.timer.record()
 
     def log_epoch_eval_end(self):
+        epoch_loss = self.val_loss_meter.avg
         epoch_speed = self.timer.get_epoch_speed()
+        if self.local_rank == 0:
+            self.list_of_scalars_summary("val", [("top1", self.top1_meter.avg)], self.current_epoch)
+            self.list_of_scalars_summary("val", [("top5", self.top5_meter.avg)], self.current_epoch)
         self.val_loss_meter.reset()
-        return epoch_speed, self.val_loss_meter.avg
+        return epoch_loss, epoch_speed
         
     def log_batch_train(self, loss):
         reduced_loss = self._reduce_tensor(loss)

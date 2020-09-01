@@ -22,6 +22,8 @@ from src.models.mobilenet import MobileNetV2
 class Trainer:
     def __init__(self, config):
         self.cfg = config
+        if not os.path.isdir(self.cfg.dataset.txt_root):
+            os.mkdir(self.cfg.dataset.txt_root)
         # init printer
         self.printer = DdpPrinter(self.cfg['device']['local_rank'])
         self.printer(self.cfg)
@@ -88,10 +90,10 @@ class Trainer:
         model_file = self.cfg.model.model_file
         # 首先看是否指定加载某一个checkpoint
         if 'checkpoint' in model_file.keys():
-            epoch = self.saver.load_checkpoint(model_file['checkpoint'], self.model, self.optimizer)
+            epoch = self.saver.load_checkpoint(model_file['checkpoint'], self.model)
         # 如果未指定，但存在checkpoint，则加载最新的
         elif len(self.saver.epoch_list) > 0:
-            epoch = self.saver.load_checkpoint(self.saver.epoch_list[0], self.model, self.optimizer)
+            epoch = self.saver.load_checkpoint(self.saver.epoch_list[0], self.model)
         # 如无checkpoint，则看是否有指定的预训练模型
         elif 'pretrain' in model_file.keys():
             model_dict = self.model.state_dict()
@@ -197,7 +199,6 @@ class Trainer:
         else:
             if self.cfg.device.local_rank == 0: print()
         avg_loss, avg_speed = self.logger.log_epoch_train_end()
-        self.saver.save_checkpoint(epoch, self.model, avg_loss)
         self._updata_lr(self.cfg.optimizer, epoch)
         self.dataloaders['train'].reset()
         return avg_loss, avg_speed
@@ -215,7 +216,7 @@ class Trainer:
                         epoch, idx, total_iter, cur_loss, cur_speed), end='', flush=True)
         else:
             if self.cfg.device.local_rank == 0: print()
-        avg_loss, avg_speed, _ = self.logger.log_epoch_eval_end()
+        avg_loss, avg_speed = self.logger.log_epoch_eval_end()
         self.dataloaders['val'].reset()
         return avg_loss, avg_speed
 
@@ -252,7 +253,7 @@ class Trainer:
                 preds = self.model(images)
                 losses = self.criterion(preds, targets)
             perf = self.evaluator(preds, targets, (1, 5))
-            rloss, speed = self.logger.log_batch_eval(losses, [0,0])
+            rloss, speed = self.logger.log_batch_eval(losses, perf)
         return rloss, speed
 
     def _updata_lr(self, cfg, epoch):

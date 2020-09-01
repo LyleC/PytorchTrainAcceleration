@@ -38,7 +38,7 @@ class Saver(object):
         '''
         self.epoch_list = self._update_status()
         while(len(self.epoch_list) > self.cfg.saver.max_keep):
-            cp_paths = glob(os.path.join(self.cp_dir, 'checkpoint_{}*.pth'.format(self.epoch_list[-1])))
+            cp_paths = glob(os.path.join(self.cp_dir, 'checkpoint_{:0>3d}*.pth'.format(self.epoch_list[-1])))
             os.remove(cp_paths[0])
             self.epoch_list.pop()
         return
@@ -50,17 +50,22 @@ class Saver(object):
         '''
         if self.local_rank == 0:
             if epoch % self.cfg.saver.save_interval == 0:
-                cp_path = os.path.join(self.cp_dir, 'checkpoint_{}_{:.3f}.pth'.format(epoch, loss))
+                if isinstance(loss, tuple):
+                    # train-loss & val-loss
+                    cp_path = os.path.join(self.cp_dir, 'checkpoint_{:0>3d}_{:.3f}_{:.3f}.pth'.format(epoch, loss[0], loss[1]))
+                else:
+                    # only train-loss
+                    cp_path = os.path.join(self.cp_dir, 'checkpoint_{:0>3d}_{:.3f}.pth'.format(epoch, loss))
                 if hasattr(model, 'module'):
                     model_dict = model.module.state_dict()
                 else:
                     model_dict = model.state_dict()
                 checkpoint = {
+                    'name': self.cfg.model.name,
                     'epoch': epoch,
                     'model': model_dict,
                 }
                 torch.save(checkpoint, cp_path)
-                print()
                 logging.info('Save checkpoint : {}'.format(cp_path)) 
                 self._remove_outdated_checkpoint()
         return
@@ -82,7 +87,7 @@ class Saver(object):
         if not isinstance(epoch, int):
             raise Exception('Epoch of checkpoint should be an Int')
 
-        cp_paths = glob(os.path.join(self.cp_dir, 'checkpoint_{}*.pth'.format(epoch)))
+        cp_paths = glob(os.path.join(self.cp_dir, 'checkpoint_{:0>3d}*.pth'.format(epoch)))
         self.epoch_list = self._update_status()
 
         if len(cp_paths) == 1:
@@ -90,16 +95,16 @@ class Saver(object):
             logging.info('Rank {}, Load checkpoint : {}'.format(self.local_rank, cp_paths[0]))
             # delete checkpoint later than epoch
             while(self.epoch_list[0] > epoch):
-                rm_paths = glob(os.path.join(self.cp_dir, 'checkpoint_{}*.pth'.format(self.epoch_list[0])))
+                rm_paths = glob(os.path.join(self.cp_dir, 'checkpoint_{:0>3d}*.pth'.format(self.epoch_list[0])))
                 os.remove(rm_paths[0])
                 self.epoch_list.pop(0)
             return epoch + 1
 
         elif len(cp_paths) == 0:
             if len(self.epoch_list) > 0:
-                cp_paths = glob(os.path.join(self.cp_dir, 'checkpoint_{}*.pth'.format(self.epoch_list[0])))
+                cp_paths = glob(os.path.join(self.cp_dir, 'checkpoint_{:0>3d}*.pth'.format(self.epoch_list[0])))
                 self._load_state_dict(cp_paths[0], model)
-                logging.info('Rank {}, Load the latest checkpoint : {}'.format(self.local_rank, cp_paths[0]))
+                logging.info('Rank {}, Load the latest checkpoint : {:0>3d}'.format(self.local_rank, cp_paths[0]))
                 return self.epoch_list[0] + 1
             else:
                 return 0
@@ -114,6 +119,8 @@ class Saver(object):
             gen_time = datetime.datetime.now().strftime('%m%d%H%M')
             save_name = self.cfg.model.name + '_' + self.cfg.dataset.name + '_' + gen_time + '.pth'
             save_path = os.path.join(self.cfg.saver.output_root, save_name)
+            if not os.path.isdir(self.cfg.saver.output_root):
+                os.mkdir(self.cfg.saver.output_root)
             if hasattr(model, 'module'):
                 torch.save(model.module.state_dict(), save_path)
             else:
