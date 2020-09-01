@@ -44,14 +44,14 @@ class ClsInputIterator(object):
             self.f_list_all = f.readlines()
 
     def shuffle(self, seed):
+        '''
+        如果是多卡并行，则在每次epoch循环时，重新对data进行shuffle操作并分块
+        '''
         random.seed(seed)
         random.shuffle(self.f_list_all)
         self.f_list = self._get_data_split()    
 
     def _get_data_split(self):
-        '''
-        如果是多卡并行，则在每次epoch循环时，重新对data进行shuffle操作并分块
-        '''
         if self.cfg.device.num > 1:
             idx_start = self.cfg.device.local_rank * self.cfg.dataset.loader.batch_size * self.num_batch
             idx_end = (self.cfg.device.local_rank+1) * self.cfg.dataset.loader.batch_size * self.num_batch
